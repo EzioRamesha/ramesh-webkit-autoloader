@@ -3,7 +3,9 @@
  * Based on the original implementation in ftpsrv by John Törnblom
  * and Payload Manager by PLK.
  *
- * Iris branding: icon0 + pic0 (home focus background) + pic1 (startup).
+ * Iris branding: icon0 + pic0/pic1 (home focus backdrop) + enriched param.
+ * AppInstUtil often leaves appmeta incomplete on update — we uninstall the
+ * existing tile first, then rewrite sce_sys + /user/appmeta after register.
  */
 
 #include <errno.h>
@@ -32,7 +34,8 @@
 
 INCASSET(param_json, "assets/param.json");
 INCASSET(icon0_png, "assets/icon0.png");
-/* pic0 = home-row focus background (required for theme). Also written as pic1. */
+/* Shared backdrop bytes written as both pic0 (wiki "background") and pic1
+ * (homebrew healers treat pic1 as full-bleed focus art). */
 INCASSET(pic0_png, "assets/homescreen/pic0.png");
 
 int sceAppInstUtilInitialize(void);
@@ -105,8 +108,60 @@ static int needs_update(const char *path, const uint8_t *expected_data,
 }
 
 /**
- * Mirror metadata into /user/appmeta/<title>/ — PS5 home UI often reads theme
- * art from appmeta rather than only /user/app/.../sce_sys.
+ * Write icon/param/pics into sce_sys for the title.
+ * @return 0 on success, -1 on failure (caller terminates AppInstUtil).
+ */
+static int write_sce_sys(const char *title_id) {
+  char param_path[256];
+  char icon_path[256];
+  char pic0_path[256];
+  char pic1_path[256];
+  char sce_sys_dir[256];
+  char base_dir[256];
+
+  snprintf(base_dir, sizeof(base_dir), "/user/app/%s", title_id);
+  snprintf(sce_sys_dir, sizeof(sce_sys_dir), "/user/app/%s/sce_sys", title_id);
+  snprintf(param_path, sizeof(param_path), "/user/app/%s/sce_sys/param.json",
+           title_id);
+  snprintf(icon_path, sizeof(icon_path), "/user/app/%s/sce_sys/icon0.png",
+           title_id);
+  snprintf(pic0_path, sizeof(pic0_path), "/user/app/%s/sce_sys/pic0.png",
+           title_id);
+  snprintf(pic1_path, sizeof(pic1_path), "/user/app/%s/sce_sys/pic1.png",
+           title_id);
+
+  if (mkdir(base_dir, 0755) && errno != EEXIST) {
+    wkali_log("[WKALI] Failed to create app dir: %s (errno: %d)\n", base_dir,
+              errno);
+    return -1;
+  }
+  if (mkdir(sce_sys_dir, 0755) && errno != EEXIST) {
+    wkali_log("[WKALI] Failed to create sce_sys dir: %s (errno: %d)\n",
+              sce_sys_dir, errno);
+    return -1;
+  }
+
+  if (install_file(param_path, param_json, param_json_size)) {
+    wkali_log("[WKALI] Failed to install param.json\n");
+    return -1;
+  }
+  if (install_file(icon_path, icon0_png, icon0_png_size)) {
+    wkali_log("[WKALI] Failed to install icon0.png\n");
+    return -1;
+  }
+  if (install_file(pic0_path, pic0_png, pic0_png_size)) {
+    wkali_log("[WKALI] Failed to install pic0.png\n");
+    return -1;
+  }
+  if (install_file(pic1_path, pic0_png, pic0_png_size)) {
+    wkali_log("[WKALI] Failed to install pic1.png\n");
+    return -1;
+  }
+  return 0;
+}
+
+/**
+ * Mirror metadata into /user/appmeta/<title>/ — home UI reads focus art here.
  */
 static void mirror_appmeta(const char *title_id) {
   char meta_dir[256];
@@ -126,13 +181,14 @@ static void mirror_appmeta(const char *title_id) {
   if (install_file(path, icon0_png, icon0_png_size))
     wkali_log("[WKALI] appmeta icon0.png failed\n");
 
-  snprintf(path, sizeof(path), "/user/appmeta/%s/pic0.png", title_id);
-  if (install_file(path, pic0_png, pic0_png_size))
-    wkali_log("[WKALI] appmeta pic0.png failed\n");
-
+  /* pic1 first — prosperismo/homebrew healers treat it as full-bleed backdrop. */
   snprintf(path, sizeof(path), "/user/appmeta/%s/pic1.png", title_id);
   if (install_file(path, pic0_png, pic0_png_size))
     wkali_log("[WKALI] appmeta pic1.png failed\n");
+
+  snprintf(path, sizeof(path), "/user/appmeta/%s/pic0.png", title_id);
+  if (install_file(path, pic0_png, pic0_png_size))
+    wkali_log("[WKALI] appmeta pic0.png failed\n");
 }
 
 int wkali_install_app_if_needed(void) {
@@ -142,6 +198,7 @@ int wkali_install_app_if_needed(void) {
   char icon_path[256];
   char pic0_path[256];
   char pic1_path[256];
+  char meta_pic1[256];
 
   snprintf(base_dir, sizeof(base_dir), "/user/app/%s", title_id);
   snprintf(param_path, sizeof(param_path), "/user/app/%s/sce_sys/param.json",
@@ -152,6 +209,7 @@ int wkali_install_app_if_needed(void) {
            title_id);
   snprintf(pic1_path, sizeof(pic1_path), "/user/app/%s/sce_sys/pic1.png",
            title_id);
+  snprintf(meta_pic1, sizeof(meta_pic1), "/user/appmeta/%s/pic1.png", title_id);
 
   int update_needed = 0;
   struct stat st;
@@ -165,6 +223,9 @@ int wkali_install_app_if_needed(void) {
     if (needs_update(pic0_path, pic0_png, pic0_png_size))
       update_needed = 1;
     if (needs_update(pic1_path, pic0_png, pic0_png_size))
+      update_needed = 1;
+    /* Also refresh when appmeta backdrop is missing (hollow registration). */
+    if (needs_update(meta_pic1, pic0_png, pic0_png_size))
       update_needed = 1;
   }
 
@@ -186,46 +247,14 @@ int wkali_install_app_if_needed(void) {
     return -1;
   }
 
-  if (mkdir(base_dir, 0755) && errno != EEXIST) {
-    wkali_log("[WKALI] Failed to create app dir: %s (errno: %d)\n", base_dir,
-              errno);
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  char sce_sys_dir[256];
-  snprintf(sce_sys_dir, sizeof(sce_sys_dir), "/user/app/%s/sce_sys", title_id);
-  if (mkdir(sce_sys_dir, 0755) && errno != EEXIST) {
-    wkali_log("[WKALI] Failed to create sce_sys dir: %s (errno: %d)\n",
-              sce_sys_dir, errno);
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if (install_file(param_path, param_json, param_json_size)) {
-    wkali_log("[WKALI] Failed to install param.json\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if (install_file(icon_path, icon0_png, icon0_png_size)) {
-    wkali_log("[WKALI] Failed to install icon0.png\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  /* pic0 = home focus background (what was missing). */
-  if (install_file(pic0_path, pic0_png, pic0_png_size)) {
-    wkali_log("[WKALI] Failed to install pic0.png (focus background)\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
-
-  if (install_file(pic1_path, pic0_png, pic0_png_size)) {
-    wkali_log("[WKALI] Failed to install pic1.png\n");
-    sceAppInstUtilTerminate();
-    return -1;
-  }
+  /* Fresh registration so AppInstUtil rebuilds appmeta from sce_sys. */
+  err = sceAppInstUtilAppUnInstall(title_id);
+  if (err)
+    wkali_log("[WKALI] %s uninstall before reinstall: 0x%08X (ok if missing)\n",
+              title_id, err);
+  else
+    wkali_log("[WKALI] Removed existing %s for clean theme reinstall\n",
+              title_id);
 
   if (strcmp(title_id, WKAL_LEGACY_TITLE_ID) != 0) {
     int uerr = sceAppInstUtilAppUnInstall(WKAL_LEGACY_TITLE_ID);
@@ -236,12 +265,20 @@ int wkali_install_app_if_needed(void) {
       wkali_log("[WKALI] Removed legacy Media tile %s\n", WKAL_LEGACY_TITLE_ID);
   }
 
+  if (write_sce_sys(title_id)) {
+    sceAppInstUtilTerminate();
+    return -1;
+  }
+
   if ((err = install_app(title_id, "/user/app/"))) {
     wkali_log("[WKALI] install_app: error 0x%08X\n", err);
     sceAppInstUtilTerminate();
     return -1;
   }
 
+  /* install_app can rewrite/clear sce_sys — put art back, then mirror appmeta. */
+  if (write_sce_sys(title_id))
+    wkali_log("[WKALI] post-register sce_sys rewrite had errors\n");
   mirror_appmeta(title_id);
 
   wkali_log("[WKALI] Iris launcher installed successfully.\n");
