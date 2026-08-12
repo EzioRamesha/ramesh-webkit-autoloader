@@ -33,7 +33,7 @@ LOGO_INSTALLER = os.path.join(ROOT, "frontend", "installer-page", "logo.svg")
 LOGO_AUTOLOADER = os.path.join(ROOT, "frontend", "autoloader", "logo.svg")
 
 VIEWBOX = 1024
-ART_RADIUS = 510.04  # outermost extent of the master art (ring reaches y=1022.08)
+ART_RADIUS = 500.0  # outermost extent of the master art (chassis disc r=500)
 PAD_FRACTION = 0.1
 SCALE = (1.0 - 2.0 * PAD_FRACTION) * (VIEWBOX / 2.0) / ART_RADIUS
 TRANSLATE = VIEWBOX * (1.0 - SCALE) / 2.0
