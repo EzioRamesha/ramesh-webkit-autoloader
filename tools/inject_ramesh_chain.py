@@ -6,6 +6,9 @@ After the PLK autoload patch, replace the single payload.elf inject with:
   2) pldmgr      (GitHub latest via API, then local mirror)
 
 Offline AppCache still works via the local mirrors under ../../payloads/.
+
+Exposes runConfiguredAutoload() so Iris continue-JB can invoke payloads
+without re-running the kernel ladder.
 """
 
 from __future__ import annotations
@@ -31,8 +34,11 @@ OLD = """        if (cfg.autoload) {
             }, 4000);
         }"""
 
-# payload.elf = single-file (PC-host installer ELF). chain = kstuff-lite then pldmgr.
-NEW = """        if (cfg.autoload === "chain" || cfg.autoload === "ramesh") {
+CALL_SITE = """        runConfiguredAutoload();"""
+
+FUNCTION_DEF = """
+function runConfiguredAutoload() {
+        if (cfg.autoload === "chain" || cfg.autoload === "ramesh") {
             stage("Ramesh chain: kstuff-lite then pldmgr in 4 s", "ok");
             setTimeout(function () {
                 (async function () {
@@ -173,7 +179,9 @@ NEW = """        if (cfg.autoload === "chain" || cfg.autoload === "ramesh") {
                     try { window.parent.postMessage({ type: "wkal", kind: "autoload", ok: false, why: String(err && err.message || err) }, "*"); } catch (e) { }
                 });
             }, 4000);
-        }"""
+        }
+}
+"""
 
 # Override fetch inside sendPayloadToElfldr when __rameshElfOverride is set.
 FETCH_HOOK_OLD = """    const response = await fetch((base || "../payloads/") + encodeURIComponent(name),
@@ -208,15 +216,23 @@ def main() -> int:
         return 1
     text = POOPS.read_text(encoding="utf-8")
     changed = False
-    if OLD not in text:
-        if "Ramesh chain: kstuff-lite then pldmgr" in text:
-            print("ramesh-chain: already injected")
-        else:
-            print("Error: expected PLK autoload block not found in poops.html", file=sys.stderr)
+
+    if "function runConfiguredAutoload()" in text:
+        print("ramesh-chain: runConfiguredAutoload already present")
+    elif OLD in text:
+        text = text.replace(OLD, CALL_SITE, 1)
+        marker = "async function main() {"
+        if marker not in text:
+            print("Error: async function main() not found", file=sys.stderr)
             return 1
-    else:
-        text = text.replace(OLD, NEW, 1)
+        text = text.replace(marker, FUNCTION_DEF + "\n" + marker, 1)
         changed = True
+    elif "Ramesh chain: kstuff-lite then pldmgr" in text:
+        print("ramesh-chain: already injected (legacy inline form)")
+    else:
+        print("Error: expected PLK autoload block not found in poops.html", file=sys.stderr)
+        return 1
+
     if FETCH_HOOK_OLD in text:
         text = text.replace(FETCH_HOOK_OLD, FETCH_HOOK_NEW, 1)
         changed = True
@@ -225,9 +241,11 @@ def main() -> int:
     else:
         print("Error: sendPayloadToElfldr fetch block not found", file=sys.stderr)
         return 1
+
     if TILES_OLD in text and "kstuff-lite.elf" not in text:
         text = text.replace(TILES_OLD, TILES_NEW, 1)
         changed = True
+
     if changed:
         POOPS.write_text(text, encoding="utf-8")
         print(f"ramesh-chain: injected into {POOPS}")

@@ -48,7 +48,7 @@
      autoload=chain → Ramesh kstuff-lite then pldmgr (latest + local mirrors).
      PC-host first-install build rewrites this to autoload=payload.elf. */
   var EXPLOIT_URL =
-    'slopkit/slopkit/poops.html?go=1&auto=1&production=1&trigger=netcontrol&attempts=8&only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate,ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5&log=debug&payload=1&autoload=chain&v=41';
+    'slopkit/slopkit/poops.html?go=1&auto=1&production=1&trigger=netcontrol&attempts=8&only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate,ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5&log=debug&payload=1&autoload=chain&v=42';
 
   function uiLog(message, type) {
     type = type || 'info';
@@ -248,7 +248,7 @@
   }
 
   function start() {
-    uiLog('WebKit Autoloader by PLK', 'success');
+    uiLog('Iris — continue-JB enabled (skips kernel if elfldr is live)', 'success');
     updateProgress(0, 'Waiting to start...');
 
     window.addEventListener('message', function (event) {
@@ -256,6 +256,9 @@
       if (!data || data.type !== 'wkal') return;
       if (data.kind === 'autoload') {
         onAutoloadResult(data);
+      } else if (data.kind === 'continue' && data.ok) {
+        uiLog('Already jailbroken — elfldr live, skipping kernel ladder.', 'success');
+        updateProgress(60, 'Already JB — loading payloads only…');
       }
     });
 

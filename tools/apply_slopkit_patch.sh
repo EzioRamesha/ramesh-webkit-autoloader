@@ -70,11 +70,19 @@ python3 "$ROOT/tools/inject_ramesh_chain.py"
 git -C "$DEST" add -A
 git -C "$DEST" commit -q -m "Apply Ramesh kstuff→pldmgr chain" || true
 
+# 3c. Iris continue-JB: skip kernel ladder when elfldr already listens
+python3 "$ROOT/tools/inject_continue_guard.py"
+git -C "$DEST" add -A
+git -C "$DEST" commit -q -m "Apply Iris continue-JB guard" || true
+
 # 4. Sanity check: the patched page must carry our integration markers and the
 #    big cat gif must be gone. Catches a silently truncated/empty patch.
 if ! grep -q 'autoload: Q.get("autoload")' slopkit/poops.html \
     || ! grep -q 'PAYLOAD_MAX_SIZE = 0x400000' slopkit/poops.html \
     || ! grep -q 'Ramesh chain: kstuff-lite then pldmgr' slopkit/poops.html \
+    || ! grep -q 'function runConfiguredAutoload' slopkit/poops.html \
+    || ! grep -q 'CONTINUE-OK' slopkit/poops.html \
+    || ! grep -q 'probeElfldrListening' slopkit/poops.html \
     || [ -f slopkit/mmhmm-cats-ps5.gif ]; then
     echo "Error: slopkit patch verification FAILED — integration markers missing."
     echo "tools/slopkit-autoload.patch is incomplete or out of date."
@@ -82,4 +90,4 @@ if ! grep -q 'autoload: Q.get("autoload")' slopkit/poops.html \
     echo "  git -C $SOURCE diff > $PATCH"
     exit 1
 fi
-echo "slopkit: patch verification OK (autoload, Ramesh chain, 4 MiB limit, cat gif removed)."
+echo "slopkit: patch verification OK (autoload, Ramesh chain, continue-JB, 4 MiB limit, cat gif removed)."
