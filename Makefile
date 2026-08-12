@@ -63,11 +63,16 @@ print-version:
 	@$(PYTHON) tools/gen_version.py --print
 
 # Regenerate all derived icon assets (homescreen icon, .ico, favicons, logos)
+# Prefer tracked Iris art in assets/homescreen/icon0.png when present.
+HOMESCREEN_ICON0 := assets/homescreen/icon0.png
+
 icons: $(ICON0) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER)
 
-$(ICON0) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) tools/gen_icons.py
+$(ICON0) $(ICON_ICO) $(FAVICON_INSTALLER) $(FAVICON_AUTOLOADER) $(LOGO_INSTALLER) $(LOGO_AUTOLOADER): $(ICON_MASTER) tools/gen_icons.py $(HOMESCREEN_ICON0)
 	@echo "Generating icon assets from $(ICON_MASTER)..."
 	$(PYTHON) tools/gen_icons.py
+	@echo "Overlaying Iris homescreen icon0 from $(HOMESCREEN_ICON0)..."
+	cp "$(HOMESCREEN_ICON0)" "$(ICON0)"
 
 $(FILE_REGISTRY_H) $(FILE_REGISTRY_C): $(FILE_REGISTRY_STAMP)
 

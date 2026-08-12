@@ -2,6 +2,8 @@
  * PS5 Homescreen App Installer for the WebKit Autoloader Installer.
  * Based on the original implementation in ftpsrv by John Törnblom
  * and Payload Manager by PLK.
+ *
+ * Iris branding: embeds homescreen icon0.png + pic1.png (focus theme).
  */
 
 #include <errno.h>
@@ -29,7 +31,9 @@
   extern const size_t name##_size;
 
 INCASSET(param_json, "assets/param.json");
+/* Tracked Iris art (assets/homescreen/) — copied to assets/icon0.png at build. */
 INCASSET(icon0_png, "assets/icon0.png");
+INCASSET(pic1_png, "assets/homescreen/pic1.png");
 
 int sceAppInstUtilInitialize(void);
 int sceAppInstUtilTerminate(void);
@@ -108,11 +112,14 @@ int wkali_install_app_if_needed(void) {
   char base_dir[256];
   char param_path[256];
   char icon_path[256];
+  char pic1_path[256];
 
   snprintf(base_dir, sizeof(base_dir), "/user/app/%s", title_id);
   snprintf(param_path, sizeof(param_path), "/user/app/%s/sce_sys/param.json",
            title_id);
   snprintf(icon_path, sizeof(icon_path), "/user/app/%s/sce_sys/icon0.png",
+           title_id);
+  snprintf(pic1_path, sizeof(pic1_path), "/user/app/%s/sce_sys/pic1.png",
            title_id);
 
   int update_needed = 0;
@@ -124,6 +131,8 @@ int wkali_install_app_if_needed(void) {
       update_needed = 1;
     if (needs_update(icon_path, icon0_png, icon0_png_size))
       update_needed = 1;
+    if (needs_update(pic1_path, pic1_png, pic1_png_size))
+      update_needed = 1;
   }
 
   if (!update_needed) {
@@ -131,11 +140,11 @@ int wkali_install_app_if_needed(void) {
   }
 
   if (stat(base_dir, &st) == 0) {
-    wkali_log("[WKALI] Updating existing app launcher (%s)...\n", title_id);
-    wkali_notify("Updating WebKit Autoloader App...");
+    wkali_log("[WKALI] Updating Iris launcher (%s)...\n", title_id);
+    wkali_notify("Updating Iris...");
   } else {
-    wkali_log("[WKALI] Installing browser launcher app (%s)...\n", title_id);
-    wkali_notify("Installing WebKit Autoloader App...");
+    wkali_log("[WKALI] Installing Iris launcher (%s)...\n", title_id);
+    wkali_notify("Installing Iris...");
   }
 
   int err;
@@ -172,14 +181,20 @@ int wkali_install_app_if_needed(void) {
     return -1;
   }
 
+  if (install_file(pic1_path, pic1_png, pic1_png_size)) {
+    wkali_log("[WKALI] Failed to install pic1.png (focus theme)\n");
+    sceAppInstUtilTerminate();
+    return -1;
+  }
+
   if ((err = install_app(title_id, "/user/app/"))) {
     wkali_log("[WKALI] install_app: error 0x%08X\n", err);
     sceAppInstUtilTerminate();
     return -1;
   }
 
-  wkali_log("[WKALI] Launcher app installed successfully.\n");
-  wkali_notify("WebKit Autoloader App Ready!");
+  wkali_log("[WKALI] Iris launcher installed successfully.\n");
+  wkali_notify("Iris Ready — reboot once");
 
   sceAppInstUtilTerminate();
   return 0;
