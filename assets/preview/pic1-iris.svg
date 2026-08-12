@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <defs>
+    <radialGradient id="void" cx="50%" cy="42%" r="70%">
+      <stop offset="0%" stop-color="#162338"/>
+      <stop offset="45%" stop-color="#0B1220"/>
+      <stop offset="100%" stop-color="#05080F"/>
+    </radialGradient>
+    <linearGradient id="hexStroke" x1="400" y1="100" x2="1520" y2="980" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9AF7FF" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#5EE7FF"/>
+      <stop offset="100%" stop-color="#3D8CFF" stop-opacity="0.7"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="25%" stop-color="#5EE7FF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#5EE7FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EE7FF" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#5EE7FF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#3D8CFF" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed void -->
+  <rect width="1920" height="1080" fill="url(#void)"/>
+
+  <!-- Soft vignette corners -->
+  <rect width="1920" height="1080" fill="#000" opacity="0.25"/>
+  <radialGradient id="cut" cx="50%" cy="45%" r="55%">
+    <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
+  </radialGradient>
+  <rect width="1920" height="1080" fill="url(#cut)"/>
+
+  <!-- Giant hex iris (centered, home-focus scale) -->
+  <g transform="translate(960 520)">
+    <polygon fill="none" stroke="url(#hexStroke)" stroke-width="10" stroke-linejoin="round"
+             points="0,-320 277,-160 277,160 0,320 -277,160 -277,-160"/>
+    <polygon fill="none" stroke="#5EE7FF" stroke-width="2.5" opacity="0.35"
+             points="0,-230 200,-115 200,115 0,230 -200,115 -200,-115"/>
+
+    <!-- Iris blades -->
+    <polygon fill="url(#blade)" points="0,-230 200,-115 0,0"/>
+    <polygon fill="url(#blade)" points="200,-115 200,115 0,0"/>
+    <polygon fill="url(#blade)" points="200,115 0,230 0,0"/>
+    <polygon fill="url(#blade)" points="0,230 -200,115 0,0"/>
+    <polygon fill="url(#blade)" points="-200,115 -200,-115 0,0"/>
+    <polygon fill="url(#blade)" points="-200,-115 0,-230 0,0"/>
+
+    <!-- Center aperture -->
+    <circle r="118" fill="#05080F"/>
+    <circle r="118" fill="none" stroke="#5EE7FF" stroke-width="3" opacity="0.5"/>
+    <circle r="160" fill="url(#core)"/>
+
+    <!-- Vertex dots -->
+    <g fill="#5EE7FF">
+      <circle cx="0" cy="-320" r="6"/>
+      <circle cx="277" cy="-160" r="6"/>
+      <circle cx="277" cy="160" r="6"/>
+      <circle cx="0" cy="320" r="6"/>
+      <circle cx="-277" cy="160" r="6"/>
+      <circle cx="-277" cy="-160" r="6"/>
+    </g>
+  </g>
+
+  <!-- Bottom title plate (how PS5 often labels the focus theme) -->
+  <text x="96" y="980" fill="#E8F7FF" font-family="Helvetica Neue, Arial, sans-serif"
+        font-size="64" font-weight="600" letter-spacing="8">IRIS</text>
+  <text x="96" y="1024" fill="#3D4F66" font-family="Helvetica Neue, Arial, sans-serif"
+        font-size="22" letter-spacing="3">RAMESH · WEBKIT GATE</text>
+</svg>
