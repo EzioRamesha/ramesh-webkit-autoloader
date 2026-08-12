@@ -48,7 +48,7 @@ DEFAULT_TARGET = "manuals.playstation.net"
 DEFAULT_OVERRIDES = "./overrides"
 DEFAULT_TTL = 300
 
-APP_NAME = "ps5-webkit-autoloader PC host"
+APP_NAME = "Ramesh WebKit Autoloader PC host"
 
 # [[VERSION_PLACEHOLDER]]
 VERSION = "dev"
@@ -116,7 +116,7 @@ def build_credits():
             "",
             "   ┌" + "─" * width + "┐",
             row("THIS PROJECT IS FREE & OPEN SOURCE"),
-            row("github.com/itsPLK/ps5-webkit-autoloader"),
+            row("github.com/EzioRamesha/ramesh-webkit-autoloader"),
             "   └" + "─" * width + "┘",
         ]
     )
@@ -145,9 +145,9 @@ class UpdateChecker:
     screen. All failures are silent — the notice is best-effort only.
     """
 
-    API_URL = "https://api.github.com/repos/itsPLK/ps5-webkit-autoloader/releases/latest"
-    RELEASES_URL = "https://github.com/itsPLK/ps5-webkit-autoloader/releases"
-    USER_AGENT = "ps5-webkit-autoloader-host"
+    API_URL = "https://api.github.com/repos/EzioRamesha/ramesh-webkit-autoloader/releases/latest"
+    RELEASES_URL = "https://github.com/EzioRamesha/ramesh-webkit-autoloader/releases"
+    USER_AGENT = "ramesh-webkit-autoloader-host"
     TIMEOUT = 3
 
     def __init__(self, version):

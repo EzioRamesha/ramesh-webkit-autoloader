@@ -117,7 +117,7 @@ EXPLOIT_IFRAME_URL = (
     "?go=1&auto=1&production=1&trigger=netcontrol&attempts=8"
     "&only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate"
     ",ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5"
-    "&log=debug&payload=1&autoload=payload.elf&v=41"
+    "&log=debug&payload=1&autoload=chain&v=41"
 )
 
 # slopkit references its own scripts with cache-busting query strings

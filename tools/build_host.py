@@ -111,6 +111,14 @@ def build_zip(frontend_dir, overrides_dir, version, build_time, payload_path=Non
                 data = data.replace(VERSION_TOKEN, version.encode("utf-8"))
                 data = data.replace(BUILD_TIME_TOKEN, build_time.encode("utf-8"))
                 zf.writestr(rel, data)
+            elif rel == "app.js" and payload_path:
+                # First-install host must autoload the installer ELF, not the
+                # Ramesh kstuff→pldmgr chain used by the homescreen app.
+                with open(file_map[rel], "rb") as f:
+                    data = f.read()
+                data = data.replace(b"autoload=chain", b"autoload=payload.elf")
+                zf.writestr(rel, data)
+                print("  app.js: autoload=chain -> autoload=payload.elf (installer host)")
             else:
                 zf.write(file_map[rel], arcname=rel)
 

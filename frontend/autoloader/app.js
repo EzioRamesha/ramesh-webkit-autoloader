@@ -44,9 +44,11 @@
 
   /* Keep in sync with EXPLOIT_IFRAME_URL in tools/gen_file_registry.py — the
      AppCache manifest lists this exact URL so the console can serve it
-     offline (AppCache matches URLs including the query string). */
+     offline (AppCache matches URLs including the query string).
+     autoload=chain → Ramesh kstuff-lite then pldmgr (latest + local mirrors).
+     PC-host first-install build rewrites this to autoload=payload.elf. */
   var EXPLOIT_URL =
-    'slopkit/slopkit/poops.html?go=1&auto=1&production=1&trigger=netcontrol&attempts=8&only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate,ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5&log=debug&payload=1&autoload=payload.elf&v=41';
+    'slopkit/slopkit/poops.html?go=1&auto=1&production=1&trigger=netcontrol&attempts=8&only=ps0_preflight,ps1_prepare,ps3_stage0,ps4_validate,ps5_stage1,ps6_stage2,ps8_stage3,ps9_stage4,ps10_stage5&log=debug&payload=1&autoload=chain&v=41';
 
   function uiLog(message, type) {
     type = type || 'info';

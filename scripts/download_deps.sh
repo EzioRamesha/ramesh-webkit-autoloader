@@ -1,26 +1,73 @@
 #!/usr/bin/env bash
-# Download the ps5-unified-autoloader payload ELF from its GitHub release,
-# pinned to the version of the third_party/ps5-unified-autoloader submodule.
+# Download payload mirrors for Ramesh WebKit Autoloader.
 #
-# The payload is the "bundled" ELF embedded in the installer: after install,
-# the homescreen app runs the exploit chain and autoloads it from the local
-# AppCache. It is not rebuilt here — it ships as a prebuilt release asset of
-# itsPLK/ps5-unified-autoloader (same approach as ps5-y2jb-autoloader's
-# scripts/download_deps.sh), but pinned to the submodule commit so builds are
-# reproducible: bump the submodule to bump the payload.
+# 1) Always refresh latest EchoStretch kstuff-lite + itsPLK pldmgr (homescreen chain).
+# 2) Keep pinned ps5-unified-autoloader as payloads/payload.elf for PC-host
+#    first-install override compatibility (installer ELF replaces it at host build).
 #
-# Idempotent: skips when the payload already exists and its sha256 matches
-# the release digest. The Makefile runs this automatically (payload-deps)
-# before staging the frontend and building the PC host.
-#
-# Uses only python3 (a build dependency already) — no curl required, so it
-# also runs inside the Docker SDK image.
+# Uses only python3. The Makefile runs this as payload-deps.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SUBMODULE="$ROOT/third_party/ps5-unified-autoloader"
 DEST_DIR="$ROOT/frontend/autoloader/payloads"
+mkdir -p "$DEST_DIR"
+
+python3 - "$DEST_DIR" <<'PY'
+import hashlib, json, os, sys, urllib.request
+
+dest_dir = sys.argv[1]
+
+def fetch(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "ramesh-webkit-autoloader-build"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return resp.read()
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+def write_elf(path, data, tag):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, path)
+    with open(path + ".sha256", "w") as f:
+        f.write(f"{tag} {sha256(data)}\n")
+    print(f"ready: {path} ({tag}, {len(data)} bytes, sha256={sha256(data)[:12]}…)")
+
+# --- kstuff-lite: always latest ---
+k_meta = json.loads(fetch("https://api.github.com/repos/EchoStretch/kstuff-lite/releases/latest"))
+k_tag = k_meta.get("tag_name", "latest")
+k_asset = None
+for a in k_meta.get("assets", []):
+    if a.get("name") == "kstuff.elf" or str(a.get("name", "")).endswith(".elf"):
+        k_asset = a
+        break
+if not k_asset:
+    sys.exit("Error: kstuff-lite latest release has no ELF asset")
+print(f"Fetching EchoStretch/kstuff-lite@{k_tag} → kstuff-lite.elf …")
+write_elf(os.path.join(dest_dir, "kstuff-lite.elf"), fetch(k_asset["browser_download_url"]), k_tag)
+
+# --- pldmgr: always latest ---
+p_meta = json.loads(fetch("https://api.github.com/repos/itsPLK/ps5-payload-manager/releases/latest"))
+p_tag = p_meta.get("tag_name", "latest")
+p_asset = None
+for a in p_meta.get("assets", []):
+    name = a.get("name", "")
+    if name.startswith("pldmgr") and name.endswith(".elf"):
+        p_asset = a
+        break
+if not p_asset:
+    sys.exit("Error: ps5-payload-manager latest release has no pldmgr*.elf")
+print(f"Fetching itsPLK/ps5-payload-manager@{p_tag} → pldmgr.elf …")
+write_elf(os.path.join(dest_dir, "pldmgr.elf"), fetch(p_asset["browser_download_url"]), p_tag)
+
+print("Ramesh chain mirrors updated (kstuff-lite + pldmgr).")
+PY
+
+# Keep original unified-autoloader payload.elf for host-build compatibility.
+SUBMODULE="$ROOT/third_party/ps5-unified-autoloader"
 DEST="$DEST_DIR/payload.elf"
 REPO="itsPLK/ps5-unified-autoloader"
 
@@ -32,17 +79,10 @@ fi
 
 TAG=$(git -C "$SUBMODULE" describe --tags --always)
 
-# Fetch the pinned release, verify the payload, and download it if needed.
-# Exit codes: 0 = payload ready, 3 = payload already present and verified.
 python3 - "$REPO" "$TAG" "$DEST" <<'PY'
-import hashlib
-import json
-import os
-import sys
-import urllib.request
-
+import hashlib, json, os, sys, urllib.request
 repo, tag, dest = sys.argv[1], sys.argv[2], sys.argv[3]
-sidecar = dest + ".sha256"  # "<tag> <sha256>" cached after a successful verify
+sidecar = dest + ".sha256"
 
 def sha256_of(path):
     h = hashlib.sha256()
@@ -51,7 +91,6 @@ def sha256_of(path):
             h.update(chunk)
     return h.hexdigest()
 
-# Offline fast path: payload + sidecar from a previous successful run.
 if os.path.isfile(dest) and os.path.isfile(sidecar):
     with open(sidecar) as f:
         try:
@@ -61,18 +100,19 @@ if os.path.isfile(dest) and os.path.isfile(sidecar):
     if st_tag == tag and sha256_of(dest) == st_hash:
         print(f"ps5-unified-autoloader payload already present and verified ({tag}).")
         sys.exit(0)
-    print("Existing payload does not match the pinned release - re-checking...")
 
 def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "ps5-webkit-autoloader-build"})
+    req = urllib.request.Request(url, headers={"User-Agent": "ramesh-webkit-autoloader-build"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         return resp.read()
 
 try:
     release = json.loads(fetch(f"https://api.github.com/repos/{repo}/releases/tags/{tag}"))
 except Exception as exc:
-    print(f"Error: could not fetch release {tag} ({exc}).", file=sys.stderr)
-    sys.exit(1)
+    # Fallback: latest if pinned tag missing
+    print(f"Warn: tag {tag} fetch failed ({exc}); trying latest…")
+    release = json.loads(fetch(f"https://api.github.com/repos/{repo}/releases/latest"))
+    tag = release.get("tag_name", tag)
 
 asset = None
 for a in release.get("assets", []):
@@ -85,37 +125,20 @@ if asset is None:
 
 digest = asset.get("digest", "")
 digest = digest.split(":", 1)[-1] if ":" in digest else digest
-
-# Already downloaded and matching the pinned release? Just cache the digest.
-if os.path.isfile(dest) and digest and sha256_of(dest) == digest:
-    with open(sidecar, "w") as f:
-        f.write(f"{tag} {digest}\n")
-    print(f"ps5-unified-autoloader payload already present and verified ({tag}).")
-    sys.exit(0)
-
 url = asset["browser_download_url"]
-print(f"Fetching release metadata for {repo}@{tag}...")
-print(f"Downloading {url} ...")
+print(f"Downloading {url} …")
 os.makedirs(os.path.dirname(dest), exist_ok=True)
-tmp = dest + ".tmp"
-try:
-    data = fetch(url)
-except Exception as exc:
-    print(f"Error: download failed ({exc}).", file=sys.stderr)
-    sys.exit(1)
-with open(tmp, "wb") as f:
-    f.write(data)
-
+data = fetch(url)
 if digest:
     actual = hashlib.sha256(data).hexdigest()
     if actual != digest:
-        os.remove(tmp)
         print(f"Error: sha256 mismatch (got {actual}, expected {digest}).", file=sys.stderr)
         sys.exit(1)
-    print(f"sha256 verified: {actual}")
-
+tmp = dest + ".tmp"
+with open(tmp, "wb") as f:
+    f.write(data)
 os.replace(tmp, dest)
 with open(sidecar, "w") as f:
-    f.write(f"{tag} {digest}\n")
+    f.write(f"{tag} {digest or hashlib.sha256(data).hexdigest()}\n")
 print(f"ps5-unified-autoloader payload ready ({tag}): {dest}")
 PY
