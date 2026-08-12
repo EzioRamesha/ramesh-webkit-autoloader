@@ -1,6 +1,6 @@
 {
-    "titleId": "WKAL00001",
-    "applicationCategoryType": 65536,
+    "titleId": "IRIS00001",
+    "applicationCategoryType": 0,
     "deeplinkUri": "http://127.0.0.1:18181/app/index.html",
     "localizedParameters": {
         "defaultLanguage": "en-US",

@@ -187,6 +187,16 @@ int wkali_install_app_if_needed(void) {
     return -1;
   }
 
+  /* Drop the old Media-row "WebKit Autoloader" tile if present. */
+  if (strcmp(title_id, WKAL_LEGACY_TITLE_ID) != 0) {
+    int uerr = sceAppInstUtilAppUnInstall(WKAL_LEGACY_TITLE_ID);
+    if (uerr)
+      wkali_log("[WKALI] Legacy %s uninstall: 0x%08X (ok if missing)\n",
+                WKAL_LEGACY_TITLE_ID, uerr);
+    else
+      wkali_log("[WKALI] Removed legacy Media tile %s\n", WKAL_LEGACY_TITLE_ID);
+  }
+
   if ((err = install_app(title_id, "/user/app/"))) {
     wkali_log("[WKALI] install_app: error 0x%08X\n", err);
     sceAppInstUtilTerminate();
