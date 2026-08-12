@@ -248,7 +248,7 @@
   }
 
   function start() {
-    uiLog('Iris — continue-JB enabled (skips kernel if elfldr is live)', 'success');
+    uiLog('Iris v' + (document.title.replace(/^Iris\s*/, '') || ''), 'success');
     updateProgress(0, 'Waiting to start...');
 
     window.addEventListener('message', function (event) {

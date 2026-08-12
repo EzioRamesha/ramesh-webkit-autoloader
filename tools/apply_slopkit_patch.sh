@@ -80,7 +80,8 @@ git -C "$DEST" commit -q -m "Apply Iris continue-JB guard" || true
 if ! grep -q 'autoload: Q.get("autoload")' slopkit/poops.html \
     || ! grep -q 'PAYLOAD_MAX_SIZE = 0x400000' slopkit/poops.html \
     || ! grep -q 'Ramesh chain: kstuff-lite then pldmgr' slopkit/poops.html \
-    || ! grep -q 'function runConfiguredAutoload' slopkit/poops.html \
+    || ! grep -q 'Iris chain payloads' slopkit/poops.html \
+    || ! grep -q 'data-name="kstuff-lite.elf"' slopkit/poops.html \
     || ! grep -q 'CONTINUE-OK' slopkit/poops.html \
     || ! grep -q 'probeElfldrListening' slopkit/poops.html \
     || [ -f slopkit/mmhmm-cats-ps5.gif ]; then

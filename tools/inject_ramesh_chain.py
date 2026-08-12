@@ -242,8 +242,30 @@ def main() -> int:
         print("Error: sendPayloadToElfldr fetch block not found", file=sys.stderr)
         return 1
 
-    if TILES_OLD in text and "kstuff-lite.elf" not in text:
+    if TILES_OLD in text and 'data-name="kstuff-lite.elf"' not in text:
         text = text.replace(TILES_OLD, TILES_NEW, 1)
+        changed = True
+
+    listed_old = """function payloadIsListed(name) {
+    if (!/^[A-Za-z0-9._-]+\\.elf$/.test(name)) return false;
+    const tiles = payloadMenuEl.getElementsByTagName("a");
+    for (let i = 0; i < tiles.length; ++i)
+        if (tiles[i].getAttribute("data-name") === name) return true;
+    return false;
+}"""
+    listed_new = """function payloadIsListed(name) {
+    if (!/^[A-Za-z0-9._-]+\\.elf$/.test(name)) return false;
+    /* Iris chain payloads — always allowed (hidden tiles may be absent). */
+    if (name === "kstuff-lite.elf" || name === "pldmgr.elf" || name === "payload.elf"
+        || name === "kstuff.elf" || name === "PLK.elf")
+        return true;
+    const tiles = payloadMenuEl.getElementsByTagName("a");
+    for (let i = 0; i < tiles.length; ++i)
+        if (tiles[i].getAttribute("data-name") === name) return true;
+    return false;
+}"""
+    if "Iris chain payloads" not in text and listed_old in text:
+        text = text.replace(listed_old, listed_new, 1)
         changed = True
 
     if changed:
