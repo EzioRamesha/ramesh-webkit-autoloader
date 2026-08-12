@@ -52,17 +52,26 @@ def detect_content_type(path):
 
 
 # slopkit ships its own payload menu servers (ftpsrv, gdbsrv, kstuff, ...) that
-# our autoloader never uses — the chain only needs the elfldr it boots and the
-# kexp shellcode that loads it. Skipping the rest keeps the installer ELF ~6 MB
-# smaller. readme.png is a slopkit repo asset, also unused. The copied slopkit
-# is a throwaway git repo (tools/apply_slopkit_patch.sh), so .git must never
-# be embedded. The payload digest sidecar (payloads/*.sha256) is build-time
-# bookkeeping and must never be served.
+# our autoloader never uses — skip most of them to keep the installer ELF small.
+# Iris chain DOES need kstuff-lite + pldmgr local mirrors (PS5 cannot CORS GitHub).
+# The copied slopkit is a throwaway git repo (tools/apply_slopkit_patch.sh), so .git
+# must never be embedded. The payload digest sidecar (payloads/*.sha256) is
+# build-time bookkeeping and must never be served.
+_CHAIN_PAYLOADS = (
+    "elfldr-ps5-1360.elf",
+    "kexp_2026_05_25.bin",
+    "kstuff-lite.elf",
+    "pldmgr.elf",
+    "kstuff.elf",
+    "PLK.elf",
+)
+
+
 def include_in_registry(path):
     if "/.git/" in path or path.endswith("/.git"):
         return False
     if path.startswith("/app/slopkit/payloads/"):
-        return path.endswith(("elfldr-ps5-1360.elf", "kexp_2026_05_25.bin"))
+        return any(path.endswith(name) for name in _CHAIN_PAYLOADS)
     if path == "/app/slopkit/readme.png":
         return False
     if path.startswith("/app/payloads/") and path.endswith(".sha256"):
